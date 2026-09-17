@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Kelola Buku (Admin): tabel + tambah/ubah/hapus buku + kelola kategori.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';

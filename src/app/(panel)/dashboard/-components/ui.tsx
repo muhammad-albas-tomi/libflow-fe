@@ -1,3 +1,5 @@
+// Penjelasan:
+// Kumpulan komponen UI dipakai ulang: Card, Button, Field, Badge, Tabel, Alert, dll.
 import type { InputHTMLAttributes, SelectHTMLAttributes } from 'react';
 
 export function PageHeader({

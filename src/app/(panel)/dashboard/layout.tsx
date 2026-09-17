@@ -1,3 +1,6 @@
+// Penjelasan:
+// Layout dashboard: cek login (kalau belum -> ke sign-in),
+// ambil data user dari cookie, bungkus dengan Shell (menu sesuai role).
 import type { Metadata } from 'next';
 
 import { redirect } from 'next/navigation';

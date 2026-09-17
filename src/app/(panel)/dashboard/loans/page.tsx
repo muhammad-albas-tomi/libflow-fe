@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Daftar semua peminjaman (Admin) + tombol Kembalikan (proses denda).
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';

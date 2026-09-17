@@ -1,3 +1,5 @@
+// Penjelasan:
+// Util format tampilan: rupiah, tanggal, label & warna status pinjaman, label role.
 import type { LoanStatus } from '~/types/library';
 
 export function formatRupiah(amount: number): string {

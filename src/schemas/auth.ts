@@ -1,3 +1,5 @@
+// Penjelasan:
+// Skema validasi form auth (Zod): sign-in (NIK/email) & sign-up (NIK 16 digit).
 import * as z from 'zod';
 
 export const signInSchema = z.object({

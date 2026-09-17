@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Kelola Anggota (Admin): daftar, daftarkan (NIK), ubah, hapus.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';

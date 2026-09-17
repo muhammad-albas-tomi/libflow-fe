@@ -1,3 +1,6 @@
+// Penjelasan:
+// Tipe data bersama sisi frontend: Book, Category, Loan, User,
+// + bentuk respons backend (list berpaginasi & item tunggal).
 export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MEMBER';
 export type LoanStatus = 'BORROWED' | 'RETURNED' | 'LATE';
 

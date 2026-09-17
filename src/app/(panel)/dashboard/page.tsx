@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Beranda dashboard. Staff: ringkasan angka + pintasan. Member: pintasan katalog & riwayat.
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';

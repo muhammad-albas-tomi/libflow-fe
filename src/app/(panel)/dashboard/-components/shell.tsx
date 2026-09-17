@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Kerangka dashboard: sidebar menu (difilter per role) + topbar (nama/role/logout).
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';

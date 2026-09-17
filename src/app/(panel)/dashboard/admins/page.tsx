@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Kelola Admin (Super Admin): daftar, tambah, ubah, hapus akun admin.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';

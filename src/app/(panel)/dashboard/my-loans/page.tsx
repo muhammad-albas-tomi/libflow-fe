@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Riwayat peminjaman milik Member sendiri (/loans/me).
 
 import { useQuery } from '@tanstack/react-query';
 

@@ -1,3 +1,6 @@
+// Penjelasan:
+// Server actions auth (jalan di server): signIn, signUp, refreshToken, signOut.
+// Panggil API backend, simpan token ke cookie, samakan bentuk respons ke FE.
 'use server';
 
 import { clearAuthCookie, getAuthCookie, setAuthCookie } from '~/lib/auth';

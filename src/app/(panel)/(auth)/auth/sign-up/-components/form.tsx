@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Form registrasi anggota: NIK 16 digit, nama, email, password + validasi.
 
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';

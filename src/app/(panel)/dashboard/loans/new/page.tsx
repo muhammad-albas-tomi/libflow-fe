@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Form Peminjaman Baru (Admin): pilih anggota + buku (stok>0) lalu simpan.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';

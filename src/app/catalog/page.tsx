@@ -1,4 +1,7 @@
 'use client';
+// Penjelasan:
+// Halaman KATALOG PUBLIK (tanpa login). Cari + filter kategori + stok.
+// Ambil data langsung dari API backend.
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';

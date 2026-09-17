@@ -1,3 +1,5 @@
+// Penjelasan:
+// Layout grup auth: kalau sudah login, dilempar ke /dashboard.
 import { redirect } from 'next/navigation';
 
 import { getAuthCookie } from '~/lib/auth';

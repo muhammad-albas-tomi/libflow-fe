@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Katalog buku versi dalam dashboard (untuk user login).
 
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
