@@ -12,7 +12,9 @@ import { getErrorMessage } from '~/lib/errors/utils';
 import { signUpSchema } from '~/schemas/auth';
 import { signUp } from '~/server/auth';
 
-type FieldErrors = Partial<Record<'nik' | 'name' | 'email' | 'password', string>>;
+type FieldErrors = Partial<
+  Record<'nik' | 'name' | 'email' | 'password', string>
+>;
 
 export function SignUpForm() {
   const router = useRouter();
@@ -29,16 +31,21 @@ export function SignUpForm() {
     mutationFn: async () => {
       // Validasi sisi klien dulu
       const parsed = signUpSchema.safeParse(form);
+
       if (!parsed.success) {
         const fe: FieldErrors = {};
+
         for (const issue of parsed.error.issues) {
           const key = issue.path[0] as keyof FieldErrors;
+
           if (key && !fe[key]) fe[key] = issue.message;
         }
         setFieldErrors(fe);
         throw new ApiError({
           type: 'validation_error',
-          errors: [{ attr: null, detail: 'Periksa kembali isian form', code: null }],
+          errors: [
+            { attr: null, detail: 'Periksa kembali isian form', code: null },
+          ],
           timestamp: new Date().toISOString(),
         });
       }
@@ -81,38 +88,38 @@ export function SignUpForm() {
         >
           <div className="space-y-4">
             <Field
+              error={fieldErrors.nik}
               id="nik"
+              inputMode="numeric"
               label="NIK"
               placeholder="16 digit angka"
               value={form.nik}
-              inputMode="numeric"
-              error={fieldErrors.nik}
               onChange={setField('nik')}
             />
             <Field
+              error={fieldErrors.name}
               id="name"
               label="Nama lengkap"
               placeholder="Nama sesuai identitas"
               value={form.name}
-              error={fieldErrors.name}
               onChange={setField('name')}
             />
             <Field
+              error={fieldErrors.email}
               id="email"
               label="Email"
-              type="email"
               placeholder="nama@email.com"
+              type="email"
               value={form.email}
-              error={fieldErrors.email}
               onChange={setField('email')}
             />
             <Field
+              error={fieldErrors.password}
               id="password"
               label="Password"
-              type="password"
               placeholder="Minimal 6 karakter"
+              type="password"
               value={form.password}
-              error={fieldErrors.password}
               onChange={setField('password')}
             />
           </div>
