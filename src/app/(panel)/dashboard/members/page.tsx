@@ -9,7 +9,7 @@ import { useRef, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 
 import { api } from '~/lib/axios';
-import { ApiError } from '~/lib/errors/api-error';
+import type { ApiError } from '~/lib/errors/api-error';
 import { getErrorMessage } from '~/lib/errors/utils';
 import { formatDate } from '~/lib/format';
 import {
@@ -36,7 +36,10 @@ export default function Page() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [notice, setNotice] = useState<{ type: 'error' | 'success'; msg: string } | null>(null);
+  const [notice, setNotice] = useState<{
+    type: 'error' | 'success';
+    msg: string;
+  } | null>(null);
   const modeRef = useRef<'create' | 'edit'>('create');
 
   const {
@@ -56,14 +59,19 @@ export default function Page() {
 
   const isEdit = editingId !== null;
 
-  const params: Record<string, string | number> = { role: 'MEMBER', limit: 100 };
+  const params: Record<string, string | number> = {
+    role: 'MEMBER',
+    limit: 100,
+  };
+
   if (search) params.search = search;
 
   const members = useQuery<PaginatedResponse<LibraryUser>>({
     queryKey: [['api', 'users', params]],
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: [['api', 'users']] });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: [['api', 'users']] });
 
   const startCreate = () => {
     modeRef.current = 'create';
@@ -74,14 +82,23 @@ export default function Page() {
   const save = useMutation<unknown, ApiError, FormValues>({
     mutationFn: async (values) => {
       if (editingId) {
-        const payload: Record<string, string> = { name: values.name, email: values.email };
+        const payload: Record<string, string> = {
+          name: values.name,
+          email: values.email,
+        };
+
         if (values.password) payload.password = values.password;
+
         return (await api.patch(`/users/${editingId}`, payload)).data;
       }
+
       return (await api.post('/users', { ...values, role: 'MEMBER' })).data;
     },
     onSuccess: () => {
-      setNotice({ type: 'success', msg: editingId ? 'Data anggota diperbarui.' : 'Anggota terdaftar.' });
+      setNotice({
+        type: 'success',
+        msg: editingId ? 'Data anggota diperbarui.' : 'Anggota terdaftar.',
+      });
       startCreate();
       invalidate();
     },
@@ -99,7 +116,10 @@ export default function Page() {
 
   return (
     <div>
-      <PageHeader description="Daftarkan & kelola anggota perpustakaan." title="Anggota" />
+      <PageHeader
+        description="Daftarkan & kelola anggota perpustakaan."
+        title="Anggota"
+      />
 
       {notice && (
         <div className="mb-4">
@@ -131,7 +151,9 @@ export default function Page() {
             ) : members.data && members.data.data.length > 0 ? (
               members.data.data.map((m) => (
                 <tr key={m.id}>
-                  <td className="px-4 py-3 font-mono text-xs">{m.memberNumber ?? '-'}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {m.memberNumber ?? '-'}
+                  </td>
                   <td className="px-4 py-3 font-medium">{m.name}</td>
                   <td className="px-4 py-3">{m.email}</td>
                   <td className="px-4 py-3">{formatDate(m.createdAt)}</td>
@@ -143,7 +165,12 @@ export default function Page() {
                         onClick={() => {
                           modeRef.current = 'edit';
                           setEditingId(m.id);
-                          reset({ nik: m.nik ?? '', name: m.name, email: m.email, password: '' });
+                          reset({
+                            nik: m.nik ?? '',
+                            name: m.name,
+                            email: m.email,
+                            password: '',
+                          });
                         }}
                       >
                         Ubah
@@ -152,7 +179,8 @@ export default function Page() {
                         className="px-3 py-1.5"
                         variant="danger"
                         onClick={() => {
-                          if (confirm(`Hapus anggota "${m.name}"?`)) remove.mutate(m.id);
+                          if (confirm(`Hapus anggota "${m.name}"?`))
+                            remove.mutate(m.id);
                         }}
                       >
                         Hapus
@@ -186,17 +214,32 @@ export default function Page() {
               maxLength={16}
               {...register('nik')}
             />
-            <Field error={errors.name?.message} label="Nama" {...register('name')} />
-            <Field error={errors.email?.message} label="Email" type="email" {...register('email')} />
+            <Field
+              error={errors.name?.message}
+              label="Nama"
+              {...register('name')}
+            />
+            <Field
+              error={errors.email?.message}
+              label="Email"
+              type="email"
+              {...register('email')}
+            />
             <Field
               error={errors.password?.message}
-              label={isEdit ? 'Password (kosongkan jika tidak diubah)' : 'Password'}
+              label={
+                isEdit ? 'Password (kosongkan jika tidak diubah)' : 'Password'
+              }
               type="password"
               {...register('password')}
             />
             <div className="flex gap-2">
               <Button disabled={save.isPending} type="submit">
-                {save.isPending ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Daftarkan'}
+                {save.isPending
+                  ? 'Menyimpan...'
+                  : isEdit
+                    ? 'Simpan Perubahan'
+                    : 'Daftarkan'}
               </Button>
               {isEdit && (
                 <Button type="button" variant="secondary" onClick={startCreate}>
@@ -206,7 +249,9 @@ export default function Page() {
             </div>
           </form>
           {!isEdit && (
-            <p className="text-xs text-gray-500">Nomor anggota dibuat otomatis oleh sistem.</p>
+            <p className="text-xs text-gray-500">
+              Nomor anggota dibuat otomatis oleh sistem.
+            </p>
           )}
         </Card>
       </div>

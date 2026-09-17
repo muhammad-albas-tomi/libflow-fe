@@ -4,7 +4,7 @@
 // Responsif: di layar kecil sidebar jadi drawer yang dibuka lewat tombol menu.
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { roleLabel } from '~/lib/format';
@@ -40,13 +40,29 @@ export function Shell({
   memberNumber: string | null;
 }>) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const items = NAV.filter((item) => item.roles.includes(role));
+
+  // Guard role: cari menu paling spesifik yang cocok URL (dari SEMUA menu),
+  // lalu cek apakah role saat ini boleh. Blokir akses via hardcode URL.
+  const currentPage = NAV.filter(
+    (item) => pathname === item.href || pathname.startsWith(item.href + '/'),
+  ).reduce<NavItem | null>(
+    (best, item) => (!best || item.href.length > best.href.length ? item : best),
+    null,
+  );
+  const allowed = !currentPage || currentPage.roles.includes(role);
 
   // Tutup drawer setiap pindah halaman
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  // Kalau role tidak berhak untuk halaman ini, tendang ke Beranda
+  useEffect(() => {
+    if (!allowed) router.replace('/dashboard');
+  }, [allowed, router]);
 
   // Pilih satu menu paling spesifik (href terpanjang) yang cocok dengan URL,
   // supaya /loans dan /loans/new tidak aktif berbarengan.
@@ -130,7 +146,15 @@ export function Shell({
           <SignOutButton />
         </header>
 
-        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+          {allowed ? (
+            children
+          ) : (
+            <p className="text-sm text-gray-500">
+              Anda tidak memiliki akses ke halaman ini. Mengalihkan...
+            </p>
+          )}
+        </main>
       </div>
     </div>
   );
