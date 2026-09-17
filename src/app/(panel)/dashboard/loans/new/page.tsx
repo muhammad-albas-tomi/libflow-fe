@@ -52,7 +52,8 @@ export default function Page() {
         type: 'success',
         msg: `Berhasil: "${selectedBook?.title}" dipinjam ${selectedMember?.name}. Jatuh tempo ${formatDate(res.data.dueDate)}.`,
       });
-      // Lanjut pinjam untuk anggota yang sama: reset buku saja
+      // Reset form sepenuhnya setelah berhasil
+      setUserId('');
       setBookId('');
       queryClient.invalidateQueries({ queryKey: [['api', 'books']] });
       queryClient.invalidateQueries({ queryKey: [['api', 'loans']] });
