@@ -1,3 +1,5 @@
+// Penjelasan:
+// Setup axios: otomatis sisipkan token ke header + auto refresh token saat 401.
 import axios from 'axios';
 
 import { authStore } from '~/lib/auth/store';

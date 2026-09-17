@@ -1,3 +1,5 @@
+// Penjelasan:
+// Fungsi fetch default: baca queryKey [['api', endpoint, params]] -> panggil API.
 import type { QueryFunction } from '@tanstack/react-query';
 import type { AppQueryKey } from './type';
 

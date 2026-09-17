@@ -1,3 +1,5 @@
+// Penjelasan:
+// Tipe bentuk respons API (data, list berpaginasi, error).
 export type Response<TData> = {
   data: TData;
 };

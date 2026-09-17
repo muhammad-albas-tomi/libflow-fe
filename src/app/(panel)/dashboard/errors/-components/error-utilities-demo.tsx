@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Komponen/halaman React.
 
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';

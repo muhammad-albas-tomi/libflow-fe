@@ -1,3 +1,5 @@
+// Penjelasan:
+// Layout paling luar aplikasi (root). Membungkus semua halaman + CSS global.
 import type { Metadata } from 'next';
 
 import '~/styles/globals.css';

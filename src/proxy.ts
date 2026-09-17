@@ -1,3 +1,5 @@
+// Penjelasan:
+// Modul TypeScript aplikasi.
 import { NextResponse } from 'next/server';
 
 export async function proxy() {

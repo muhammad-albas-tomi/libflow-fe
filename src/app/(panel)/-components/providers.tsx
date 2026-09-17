@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Provider React Query (client) untuk caching & fetching data.
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';

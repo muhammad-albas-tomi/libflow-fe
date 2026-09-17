@@ -1,3 +1,5 @@
+// Penjelasan:
+// Komponen/halaman React.
 import Link from 'next/link';
 
 import { BasicErrorDisplay } from './-components/basic-error-display';

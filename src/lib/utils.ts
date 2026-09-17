@@ -1,3 +1,5 @@
+// Penjelasan:
+// Utility umum FE: cn (gabung class), delay, randomDelay, buildZodErrors.
 import type * as z from 'zod';
 
 import { clsx, type ClassValue } from 'clsx';

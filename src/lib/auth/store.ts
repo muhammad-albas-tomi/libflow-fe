@@ -1,3 +1,5 @@
+// Penjelasan:
+// Store global (Zustand) penyimpan accessToken & refreshToken.
 import { createStore } from 'zustand/vanilla';
 
 /**

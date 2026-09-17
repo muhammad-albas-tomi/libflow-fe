@@ -1,3 +1,5 @@
+// Penjelasan:
+// Class ApiError sisi FE: bungkus & klasifikasi error API + adapter format backend.
 import type { AxiosError } from 'axios';
 
 import type { ErrorResponse } from '~/types/response';

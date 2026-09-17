@@ -1,3 +1,5 @@
+// Penjelasan:
+// Provider & hook React (useAuth) untuk baca/ubah state auth di komponen.
 import type { AuthStore, AuthStoreState, createAuthStore } from './store';
 
 import { createContext, useContext } from 'react';

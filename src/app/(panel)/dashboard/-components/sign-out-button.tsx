@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Tombol logout: hapus token & cookie, balik ke halaman login.
 
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';

@@ -1,3 +1,5 @@
+// Penjelasan:
+// Setup QueryClient (TanStack Query): aturan caching default.
 import { QueryClient } from '@tanstack/react-query';
 
 import { defaultQueryFn } from './default-query-fn';

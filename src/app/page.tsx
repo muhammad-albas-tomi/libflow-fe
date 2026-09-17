@@ -1,3 +1,5 @@
+// Penjelasan:
+// Halaman root '/': cek login, arahkan ke /dashboard (sudah login) atau /auth/sign-in.
 import { redirect } from 'next/navigation';
 
 import { getAuthCookie } from '~/lib/auth';

@@ -1,3 +1,5 @@
+// Penjelasan:
+// Baca/simpan/hapus cookie auth di sisi server (encode base64).
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 

@@ -1,4 +1,6 @@
 'use client';
+// Penjelasan:
+// Form login: input NIK/email + password, panggil server action signIn.
 
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';

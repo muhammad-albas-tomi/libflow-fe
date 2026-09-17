@@ -1,3 +1,5 @@
+// Penjelasan:
+// Helper error: ambil pesan error yang enak dibaca untuk ditampilkan.
 import type { AxiosError } from 'axios';
 
 import { ApiError } from './api-error';
