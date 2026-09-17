@@ -13,10 +13,10 @@ function makeQueryClient() {
         // staleTime 0: data dianggap usang setelah dipakai, jadi tiap buka
         // halaman (mis. Katalog/Kelola Buku) selalu ambil stok terbaru.
         staleTime: 0,
-        refetchOnWindowFocus: false,
-        // Refetch saat komponen mount supaya data (stok, dll) tidak basi
-        // setelah peminjaman/pengembalian.
-        refetchOnMount: true,
+        // Selalu ambil data terbaru saat halaman dibuka (stok tidak basi)
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
         queryFn: defaultQueryFn,
       },
     },
