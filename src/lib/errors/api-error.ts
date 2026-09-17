@@ -82,6 +82,12 @@ export class ApiError extends Error {
       return new ApiError(error.response.data, error.response.status, error);
     }
 
+    // Adaptasi format error backend LibFlow: { code, message, stack? }
+    const beError = ApiError.toErrorResponse(error.response?.data);
+    if (beError) {
+      return new ApiError(beError, error.response?.status, error);
+    }
+
     const fallbackErrorResponse: ErrorResponse = {
       type: 'network_error',
       errors: [
@@ -110,6 +116,60 @@ export class ApiError extends Error {
    * }
    * ```
    */
+  /**
+   * Mengubah format error backend LibFlow ({ code, message, stack? })
+   * menjadi ErrorResponse standar FE. Mengembalikan null jika tidak cocok.
+   */
+  static toErrorResponse(data: unknown): ErrorResponse | null {
+    if (
+      typeof data !== 'object' ||
+      data === null ||
+      !('message' in data) ||
+      typeof (data as { message: unknown }).message !== 'string'
+    ) {
+      return null;
+    }
+
+    const be = data as { code?: number; message: string; stack?: string };
+    const errors: ErrorResponse['errors'] = [];
+
+    // Detail validasi Zod dari backend disimpan sebagai JSON di `stack`
+    if (be.message === 'Validation failed' && typeof be.stack === 'string') {
+      try {
+        const parsed = JSON.parse(be.stack) as Array<{
+          path: string;
+          message: string;
+        }>;
+
+        if (Array.isArray(parsed)) {
+          for (const issue of parsed) {
+            errors.push({
+              attr: issue.path?.split('.').pop() ?? null,
+              detail: issue.message ?? be.message,
+              code: be.code ? String(be.code) : null,
+            });
+          }
+        }
+      } catch {
+        // abaikan, pakai pesan utama di bawah
+      }
+    }
+
+    if (errors.length === 0) {
+      errors.push({
+        attr: null,
+        detail: be.message,
+        code: be.code ? String(be.code) : null,
+      });
+    }
+
+    return {
+      type: 'api_error',
+      errors,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   static isErrorResponse(data: unknown): data is ErrorResponse {
     return (
       typeof data === 'object' &&

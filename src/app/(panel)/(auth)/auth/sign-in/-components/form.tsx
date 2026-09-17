@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -56,14 +57,14 @@ export function SignInForm() {
                 className="block text-sm font-medium text-gray-700 mb-1"
                 htmlFor="email"
               >
-                Email address
+                NIK atau Email
               </label>
               <input
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 id="email"
-                placeholder="Enter your email"
-                type="email"
+                placeholder="NIK 16 digit atau email"
+                type="text"
                 value={credential.email}
                 onChange={(e) =>
                   setCredential((prev) => ({ ...prev, email: e.target.value }))
@@ -157,6 +158,25 @@ export function SignInForm() {
               )}
             </button>
           </div>
+
+          <p className="text-center text-sm text-gray-600">
+            Belum punya akun?{' '}
+            <Link
+              className="text-blue-600 hover:text-blue-700 underline underline-offset-2"
+              href="/auth/sign-up"
+            >
+              Daftar sebagai anggota
+            </Link>
+          </p>
+
+          <p className="text-center text-sm text-gray-600">
+            <Link
+              className="text-gray-600 hover:text-gray-800 underline underline-offset-2"
+              href="/catalog"
+            >
+              Lihat katalog tanpa masuk
+            </Link>
+          </p>
         </form>
       </div>
     </div>
