@@ -5,7 +5,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { api } from '~/lib/axios';
@@ -63,8 +63,26 @@ export default function Page() {
 
   const startCreateBook = () => {
     setEditingId(null);
-    bookForm.reset(emptyBook);
   };
+
+  // Isi / kosongkan form buku saat mode edit berubah
+  useEffect(() => {
+    if (editingId) {
+      const b = books.data?.data.find((x) => x.id === editingId);
+      if (b) {
+        bookForm.reset({
+          isbn: b.isbn,
+          title: b.title,
+          author: b.author,
+          stock: b.stock,
+          categoryId: b.categoryId,
+        });
+      }
+    } else {
+      bookForm.reset(emptyBook);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId]);
 
   const saveBook = useMutation<unknown, ApiError, BookInput>({
     mutationFn: async (values) => {
@@ -157,16 +175,7 @@ export default function Page() {
                       <Button
                         className="px-3 py-1.5"
                         variant="secondary"
-                        onClick={() => {
-                          setEditingId(b.id);
-                          bookForm.reset({
-                            isbn: b.isbn,
-                            title: b.title,
-                            author: b.author,
-                            stock: b.stock,
-                            categoryId: b.categoryId,
-                          });
-                        }}
+                        onClick={() => setEditingId(b.id)}
                       >
                         Ubah
                       </Button>

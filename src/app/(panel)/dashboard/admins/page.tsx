@@ -5,7 +5,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 
 import { api } from '~/lib/axios';
@@ -67,10 +67,23 @@ export default function Page() {
     queryClient.invalidateQueries({ queryKey: [['api', 'users']] });
 
   const startCreate = () => {
-    modeRef.current = 'create';
     setEditingId(null);
-    reset(emptyForm);
   };
+
+  // Isi / kosongkan form saat mode edit berubah
+  useEffect(() => {
+    if (editingId) {
+      const a = admins.data?.data.find((x) => x.id === editingId);
+      if (a) {
+        modeRef.current = 'edit';
+        reset({ name: a.name, email: a.email, password: '' });
+      }
+    } else {
+      modeRef.current = 'create';
+      reset(emptyForm);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId]);
 
   const save = useMutation<unknown, ApiError, FormValues>({
     mutationFn: async (values) => {
@@ -149,11 +162,7 @@ export default function Page() {
                       <Button
                         className="px-3 py-1.5"
                         variant="secondary"
-                        onClick={() => {
-                          modeRef.current = 'edit';
-                          setEditingId(a.id);
-                          reset({ name: a.name, email: a.email, password: '' });
-                        }}
+                        onClick={() => setEditingId(a.id)}
                       >
                         Ubah
                       </Button>
