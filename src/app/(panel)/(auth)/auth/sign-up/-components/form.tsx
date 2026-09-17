@@ -1,75 +1,64 @@
 'use client';
 // Penjelasan:
-// Form registrasi anggota: NIK 16 digit, nama, email, password + validasi.
+// Form registrasi anggota (react-hook-form + Zod): NIK 16 digit, nama, email, password.
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { forwardRef, type InputHTMLAttributes } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { ApiError } from '~/lib/errors/api-error';
 import { getErrorMessage } from '~/lib/errors/utils';
-import { signUpSchema } from '~/schemas/auth';
+import { signUpSchema, type SignUpSchema } from '~/schemas/auth';
 import { signUp } from '~/server/auth';
 
-type FieldErrors = Partial<
-  Record<'nik' | 'name' | 'email' | 'password', string>
->;
+const Field = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }
+>(function Field({ label, error, ...props }, ref) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+      <input
+        ref={ref}
+        className={`relative block w-full appearance-none rounded-md border px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm ${
+          error ? 'border-red-400' : 'border-gray-300'
+        }`}
+        {...props}
+      />
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+});
 
 export function SignUpForm() {
   const router = useRouter();
 
-  const [form, setForm] = useState({
-    nik: '',
-    name: '',
-    email: '',
-    password: '',
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignUpSchema>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { nik: '', name: '', email: '', password: '' },
   });
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  const { mutate, error, isPending } = useMutation<unknown, ApiError>({
-    mutationFn: async () => {
-      // Validasi sisi klien dulu
-      const parsed = signUpSchema.safeParse(form);
-
-      if (!parsed.success) {
-        const fe: FieldErrors = {};
-
-        for (const issue of parsed.error.issues) {
-          const key = issue.path[0] as keyof FieldErrors;
-
-          if (key && !fe[key]) fe[key] = issue.message;
-        }
-        setFieldErrors(fe);
-        throw new ApiError({
-          type: 'validation_error',
-          errors: [
-            { attr: null, detail: 'Periksa kembali isian form', code: null },
-          ],
-          timestamp: new Date().toISOString(),
-        });
-      }
-      setFieldErrors({});
-
-      const response = await signUp(parsed.data);
-
+  const { mutate, error, isPending } = useMutation<unknown, ApiError, SignUpSchema>({
+    mutationFn: async (values) => {
+      const response = await signUp(values);
       if (ApiError.isErrorResponse(response)) {
         throw new ApiError(response);
       }
-
       return response;
     },
-    onSuccess: () => {
-      router.push('/dashboard');
-    },
+    onSuccess: () => router.push('/dashboard'),
   });
 
-  const setField = (key: keyof typeof form) => (value: string) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
-
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Daftar Anggota Perpustakaan
@@ -80,58 +69,47 @@ export function SignUpForm() {
         </div>
 
         <form
-          className="mt-8 space-y-6 bg-white shadow-lg rounded-lg px-8 pt-6 pb-8"
-          onSubmit={(e) => {
-            e.preventDefault();
-            mutate();
-          }}
+          className="mt-8 space-y-6 rounded-lg bg-white px-8 pb-8 pt-6 shadow-lg"
+          onSubmit={handleSubmit((values) => mutate(values))}
         >
           <div className="space-y-4">
             <Field
-              error={fieldErrors.nik}
-              id="nik"
+              error={errors.nik?.message}
               inputMode="numeric"
               label="NIK"
               placeholder="16 digit angka"
-              value={form.nik}
-              onChange={setField('nik')}
+              {...register('nik')}
             />
             <Field
-              error={fieldErrors.name}
-              id="name"
+              error={errors.name?.message}
               label="Nama lengkap"
               placeholder="Nama sesuai identitas"
-              value={form.name}
-              onChange={setField('name')}
+              {...register('name')}
             />
             <Field
-              error={fieldErrors.email}
-              id="email"
+              error={errors.email?.message}
               label="Email"
               placeholder="nama@email.com"
               type="email"
-              value={form.email}
-              onChange={setField('email')}
+              {...register('email')}
             />
             <Field
-              error={fieldErrors.password}
-              id="password"
+              error={errors.password?.message}
               label="Password"
               placeholder="Minimal 6 karakter"
               type="password"
-              value={form.password}
-              onChange={setField('password')}
+              {...register('password')}
             />
           </div>
 
           {error && (
-            <div className="rounded-md bg-red-50 p-4 border border-red-200 text-sm text-red-700">
+            <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {getErrorMessage(error)}
             </div>
           )}
 
           <button
-            className="w-full flex justify-center py-2 px-4 rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex w-full justify-center rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isPending}
             type="submit"
           >
@@ -140,59 +118,12 @@ export function SignUpForm() {
 
           <p className="text-center text-sm text-gray-600">
             Sudah punya akun?{' '}
-            <Link
-              className="text-blue-600 hover:text-blue-700 underline underline-offset-2"
-              href="/auth/sign-in"
-            >
+            <Link className="text-blue-600 underline underline-offset-2 hover:text-blue-700" href="/auth/sign-in">
               Masuk di sini
             </Link>
           </p>
         </form>
       </div>
-    </div>
-  );
-}
-
-function Field({
-  id,
-  label,
-  value,
-  onChange,
-  type = 'text',
-  placeholder,
-  error,
-  inputMode,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  placeholder?: string;
-  error?: string;
-  inputMode?: 'numeric' | 'text';
-}) {
-  return (
-    <div>
-      <label
-        className="block text-sm font-medium text-gray-700 mb-1"
-        htmlFor={id}
-      >
-        {label}
-      </label>
-      <input
-        required
-        className={`appearance-none relative block w-full px-3 py-2 border ${
-          error ? 'border-red-400' : 'border-gray-300'
-        } placeholder-gray-400 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-        id={id}
-        inputMode={inputMode}
-        placeholder={placeholder}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

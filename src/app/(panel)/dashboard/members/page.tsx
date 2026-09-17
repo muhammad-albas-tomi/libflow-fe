@@ -1,14 +1,22 @@
 'use client';
 // Penjelasan:
 // Kelola Anggota (Admin): daftar, daftarkan (NIK), ubah, hapus.
+// Form pakai react-hook-form + Zod. Mode create butuh NIK+password, edit password opsional.
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useForm, type Resolver } from 'react-hook-form';
 
 import { api } from '~/lib/axios';
-import type { ApiError } from '~/lib/errors/api-error';
+import { ApiError } from '~/lib/errors/api-error';
 import { getErrorMessage } from '~/lib/errors/utils';
 import { formatDate } from '~/lib/format';
+import {
+  memberCreateSchema,
+  memberUpdateSchema,
+  type MemberCreateInput,
+} from '~/schemas/library';
 import type { LibraryUser, PaginatedResponse } from '~/types/library';
 
 import {
@@ -21,63 +29,60 @@ import {
   TableShell,
 } from '../-components/ui';
 
-type MemberForm = {
-  id?: string;
-  nik: string;
-  name: string;
-  email: string;
-  password: string;
-};
-
-const emptyForm: MemberForm = { nik: '', name: '', email: '', password: '' };
+type FormValues = MemberCreateInput;
+const emptyForm: FormValues = { nik: '', name: '', email: '', password: '' };
 
 export default function Page() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<MemberForm>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [notice, setNotice] = useState<{
-    type: 'error' | 'success';
-    msg: string;
-  } | null>(null);
+  const [notice, setNotice] = useState<{ type: 'error' | 'success'; msg: string } | null>(null);
+  const modeRef = useRef<'create' | 'edit'>('create');
 
-  const isEdit = Boolean(form.id);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: (values, ctx, opts) =>
+      (
+        zodResolver(
+          modeRef.current === 'edit' ? memberUpdateSchema : memberCreateSchema,
+        ) as unknown as Resolver<FormValues>
+      )(values, ctx, opts),
+    defaultValues: emptyForm,
+  });
 
-  const params: Record<string, string | number> = {
-    role: 'MEMBER',
-    limit: 100,
-  };
+  const isEdit = editingId !== null;
 
+  const params: Record<string, string | number> = { role: 'MEMBER', limit: 100 };
   if (search) params.search = search;
 
   const members = useQuery<PaginatedResponse<LibraryUser>>({
     queryKey: [['api', 'users', params]],
   });
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: [['api', 'users']] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: [['api', 'users']] });
 
-  const save = useMutation<unknown, ApiError>({
-    mutationFn: async () => {
-      if (form.id) {
-        // Update: hanya kirim field yang relevan (password opsional)
-        const payload: Record<string, string> = {
-          name: form.name,
-          email: form.email,
-        };
+  const startCreate = () => {
+    modeRef.current = 'create';
+    setEditingId(null);
+    reset(emptyForm);
+  };
 
-        if (form.password) payload.password = form.password;
-
-        return (await api.patch(`/users/${form.id}`, payload)).data;
+  const save = useMutation<unknown, ApiError, FormValues>({
+    mutationFn: async (values) => {
+      if (editingId) {
+        const payload: Record<string, string> = { name: values.name, email: values.email };
+        if (values.password) payload.password = values.password;
+        return (await api.patch(`/users/${editingId}`, payload)).data;
       }
-
-      return (await api.post('/users', { ...form, role: 'MEMBER' })).data;
+      return (await api.post('/users', { ...values, role: 'MEMBER' })).data;
     },
     onSuccess: () => {
-      setNotice({
-        type: 'success',
-        msg: form.id ? 'Data anggota diperbarui.' : 'Anggota terdaftar.',
-      });
-      setForm(emptyForm);
+      setNotice({ type: 'success', msg: editingId ? 'Data anggota diperbarui.' : 'Anggota terdaftar.' });
+      startCreate();
       invalidate();
     },
     onError: (err) => setNotice({ type: 'error', msg: getErrorMessage(err) }),
@@ -92,25 +97,9 @@ export default function Page() {
     onError: (err) => setNotice({ type: 'error', msg: getErrorMessage(err) }),
   });
 
-  const set = (k: keyof MemberForm) => (v: string) =>
-    setForm((p) => ({ ...p, [k]: v }));
-
-  const nikValid = /^\d{16}$/.test(form.nik);
-  const nikError =
-    !isEdit && form.nik && !nikValid ? 'NIK harus 16 digit angka' : undefined;
-
-  const canSave =
-    form.name &&
-    form.email &&
-    (isEdit || (nikValid && form.password)) &&
-    !save.isPending;
-
   return (
     <div>
-      <PageHeader
-        description="Daftarkan & kelola anggota perpustakaan."
-        title="Anggota"
-      />
+      <PageHeader description="Daftarkan & kelola anggota perpustakaan." title="Anggota" />
 
       {notice && (
         <div className="mb-4">
@@ -142,9 +131,7 @@ export default function Page() {
             ) : members.data && members.data.data.length > 0 ? (
               members.data.data.map((m) => (
                 <tr key={m.id}>
-                  <td className="px-4 py-3 font-mono text-xs">
-                    {m.memberNumber ?? '-'}
-                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">{m.memberNumber ?? '-'}</td>
                   <td className="px-4 py-3 font-medium">{m.name}</td>
                   <td className="px-4 py-3">{m.email}</td>
                   <td className="px-4 py-3">{formatDate(m.createdAt)}</td>
@@ -153,15 +140,11 @@ export default function Page() {
                       <Button
                         className="px-3 py-1.5"
                         variant="secondary"
-                        onClick={() =>
-                          setForm({
-                            id: m.id,
-                            nik: m.nik ?? '',
-                            name: m.name,
-                            email: m.email,
-                            password: '',
-                          })
-                        }
+                        onClick={() => {
+                          modeRef.current = 'edit';
+                          setEditingId(m.id);
+                          reset({ nik: m.nik ?? '', name: m.name, email: m.email, password: '' });
+                        }}
                       >
                         Ubah
                       </Button>
@@ -169,8 +152,7 @@ export default function Page() {
                         className="px-3 py-1.5"
                         variant="danger"
                         onClick={() => {
-                          if (confirm(`Hapus anggota "${m.name}"?`))
-                            remove.mutate(m.id);
+                          if (confirm(`Hapus anggota "${m.name}"?`)) remove.mutate(m.id);
                         }}
                       >
                         Hapus
@@ -189,58 +171,42 @@ export default function Page() {
           <h2 className="font-semibold text-gray-900">
             {isEdit ? 'Ubah Anggota' : 'Daftarkan Anggota'}
           </h2>
-          <Field
-            disabled={isEdit}
-            error={nikError}
-            inputMode="numeric"
-            label="NIK (16 digit)"
-            maxLength={16}
-            value={form.nik}
-            onChange={(e) => set('nik')(e.target.value.replace(/\D/g, ''))}
-          />
-          <Field
-            label="Nama"
-            value={form.name}
-            onChange={(e) => set('name')(e.target.value)}
-          />
-          <Field
-            label="Email"
-            type="email"
-            value={form.email}
-            onChange={(e) => set('email')(e.target.value)}
-          />
-          <Field
-            label={
-              isEdit ? 'Password (kosongkan jika tidak diubah)' : 'Password'
-            }
-            type="password"
-            value={form.password}
-            onChange={(e) => set('password')(e.target.value)}
-          />
-          <div className="flex gap-2">
-            <Button
-              disabled={!canSave}
-              onClick={() => {
-                setNotice(null);
-                save.mutate();
-              }}
-            >
-              {save.isPending
-                ? 'Menyimpan...'
-                : isEdit
-                  ? 'Simpan Perubahan'
-                  : 'Daftarkan'}
-            </Button>
-            {isEdit && (
-              <Button variant="secondary" onClick={() => setForm(emptyForm)}>
-                Batal
+          <form
+            className="space-y-3"
+            onSubmit={handleSubmit((values) => {
+              setNotice(null);
+              save.mutate(values);
+            })}
+          >
+            <Field
+              disabled={isEdit}
+              error={errors.nik?.message}
+              inputMode="numeric"
+              label="NIK (16 digit)"
+              maxLength={16}
+              {...register('nik')}
+            />
+            <Field error={errors.name?.message} label="Nama" {...register('name')} />
+            <Field error={errors.email?.message} label="Email" type="email" {...register('email')} />
+            <Field
+              error={errors.password?.message}
+              label={isEdit ? 'Password (kosongkan jika tidak diubah)' : 'Password'}
+              type="password"
+              {...register('password')}
+            />
+            <div className="flex gap-2">
+              <Button disabled={save.isPending} type="submit">
+                {save.isPending ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Daftarkan'}
               </Button>
-            )}
-          </div>
+              {isEdit && (
+                <Button type="button" variant="secondary" onClick={startCreate}>
+                  Batal
+                </Button>
+              )}
+            </div>
+          </form>
           {!isEdit && (
-            <p className="text-xs text-gray-500">
-              Nomor anggota dibuat otomatis oleh sistem.
-            </p>
+            <p className="text-xs text-gray-500">Nomor anggota dibuat otomatis oleh sistem.</p>
           )}
         </Card>
       </div>

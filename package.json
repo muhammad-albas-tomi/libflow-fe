@@ -13,6 +13,7 @@
     "test:dev": "jest --watchAll"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
     "@tanstack/react-query": "^5.90.16",
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
@@ -22,6 +23,7 @@
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-hook-form": "^7.88.0",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.5",
     "zustand": "^5.0.10"

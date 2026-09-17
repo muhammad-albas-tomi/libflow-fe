@@ -1,15 +1,18 @@
 'use client';
 // Penjelasan:
 // Form Peminjaman Baru (Admin): cari & pilih anggota + buku (stok>0),
-// lihat ringkasan (jatuh tempo +7 hari), lalu simpan. Bisa lanjut pinjam untuk anggota sama.
+// lihat ringkasan (jatuh tempo +7 hari), lalu simpan. Validasi pakai react-hook-form + Zod.
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { api } from '~/lib/axios';
 import { ApiError } from '~/lib/errors/api-error';
 import { getErrorMessage } from '~/lib/errors/utils';
 import { formatDate } from '~/lib/format';
+import { loanSchema, type LoanInput } from '~/schemas/library';
 import type {
   Book,
   ItemResponse,
@@ -22,8 +25,21 @@ import { Alert, Badge, Button, Card, PageHeader } from '../../-components/ui';
 
 export default function Page() {
   const queryClient = useQueryClient();
-  const [userId, setUserId] = useState('');
-  const [bookId, setBookId] = useState('');
+
+  const {
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<LoanInput>({
+    resolver: zodResolver(loanSchema),
+    defaultValues: { userId: '', bookId: '' },
+  });
+
+  const userId = watch('userId');
+  const bookId = watch('bookId');
+
   const [notice, setNotice] = useState<{ type: 'error' | 'success'; msg: string } | null>(null);
 
   const members = useQuery<PaginatedResponse<LibraryUser>>({
@@ -42,27 +58,20 @@ export default function Page() {
     return d.toISOString();
   }, []);
 
-  const mutation = useMutation<ItemResponse<Loan>, ApiError>({
-    mutationFn: async () => {
-      const res = await api.post('/loans', { userId, bookId });
-      return res.data;
-    },
+  const mutation = useMutation<ItemResponse<Loan>, ApiError, LoanInput>({
+    mutationFn: async (values) => (await api.post('/loans', values)).data,
     onSuccess: (res) => {
       setNotice({
         type: 'success',
         msg: `Berhasil: "${selectedBook?.title}" dipinjam ${selectedMember?.name}. Jatuh tempo ${formatDate(res.data.dueDate)}.`,
       });
-      // Reset form sepenuhnya setelah berhasil
-      setUserId('');
-      setBookId('');
+      reset({ userId: '', bookId: '' });
       queryClient.invalidateQueries({ queryKey: [['api', 'books']] });
       queryClient.invalidateQueries({ queryKey: [['api', 'loans']] });
       queryClient.invalidateQueries({ queryKey: [['api', 'users']] });
     },
     onError: (err) => setNotice({ type: 'error', msg: getErrorMessage(err) }),
   });
-
-  const canSubmit = Boolean(userId && bookId) && !mutation.isPending;
 
   return (
     <div className="max-w-2xl">
@@ -71,107 +80,115 @@ export default function Page() {
       <Card className="space-y-5 p-6">
         {notice && <Alert variant={notice.type}>{notice.msg}</Alert>}
 
-        {/* Langkah 1: anggota */}
-        <div>
-          <p className="mb-2 text-sm font-semibold text-gray-700">1. Anggota</p>
-          {selectedMember ? (
-            <SelectedRow
-              subtitle={`${selectedMember.memberNumber ?? '-'} · ${selectedMember.email}`}
-              title={selectedMember.name}
-              onClear={() => {
-                setUserId('');
-                setNotice(null);
-              }}
-            />
-          ) : (
-            <Picker
-              emptyText="Anggota tidak ditemukan"
-              loading={members.isLoading}
-              placeholder="Cari nama / NIK / nomor anggota"
-              options={(members.data?.data ?? []).map((m) => ({
-                id: m.id,
-                title: m.name,
-                subtitle: `${m.memberNumber ?? '-'} · ${m.email}`,
-                keywords: `${m.name} ${m.nik ?? ''} ${m.memberNumber ?? ''} ${m.email}`,
-              }))}
-              onPick={(id) => {
-                setUserId(id);
-                setNotice(null);
-              }}
-            />
-          )}
-        </div>
-
-        {/* Langkah 2: buku */}
-        <div>
-          <p className="mb-2 text-sm font-semibold text-gray-700">2. Buku (stok tersedia)</p>
-          {selectedBook ? (
-            <SelectedRow
-              subtitle={`${selectedBook.author} · stok ${selectedBook.stock}`}
-              title={selectedBook.title}
-              onClear={() => setBookId('')}
-            />
-          ) : (
-            <Picker
-              emptyText="Tidak ada buku tersedia"
-              loading={books.isLoading}
-              placeholder="Cari judul / pengarang / ISBN"
-              options={(books.data?.data ?? [])
-                .filter((b) => b.stock > 0)
-                .map((b) => ({
-                  id: b.id,
-                  title: b.title,
-                  subtitle: `${b.author} · stok ${b.stock}`,
-                  keywords: `${b.title} ${b.author} ${b.isbn}`,
+        <form
+          className="space-y-5"
+          onSubmit={handleSubmit((values) => {
+            setNotice(null);
+            mutation.mutate(values);
+          })}
+        >
+          {/* Langkah 1: anggota */}
+          <div>
+            <p className="mb-2 text-sm font-semibold text-gray-700">1. Anggota</p>
+            {selectedMember ? (
+              <SelectedRow
+                subtitle={`${selectedMember.memberNumber ?? '-'} · ${selectedMember.email}`}
+                title={selectedMember.name}
+                onClear={() => {
+                  setValue('userId', '', { shouldValidate: true });
+                  setNotice(null);
+                }}
+              />
+            ) : (
+              <Picker
+                emptyText="Anggota tidak ditemukan"
+                loading={members.isLoading}
+                placeholder="Cari nama / NIK / nomor anggota"
+                options={(members.data?.data ?? []).map((m) => ({
+                  id: m.id,
+                  title: m.name,
+                  subtitle: `${m.memberNumber ?? '-'} · ${m.email}`,
+                  keywords: `${m.name} ${m.nik ?? ''} ${m.memberNumber ?? ''} ${m.email}`,
                 }))}
-              onPick={(id) => setBookId(id)}
-            />
-          )}
-        </div>
-
-        {/* Ringkasan */}
-        {selectedMember && selectedBook && (
-          <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm">
-            <p className="mb-2 font-semibold text-gray-700">Ringkasan</p>
-            <dl className="grid grid-cols-3 gap-y-1">
-              <dt className="text-gray-500">Anggota</dt>
-              <dd className="col-span-2 text-gray-900">{selectedMember.name}</dd>
-              <dt className="text-gray-500">Buku</dt>
-              <dd className="col-span-2 text-gray-900">{selectedBook.title}</dd>
-              <dt className="text-gray-500">Tanggal pinjam</dt>
-              <dd className="col-span-2 text-gray-900">{formatDate(new Date().toISOString())}</dd>
-              <dt className="text-gray-500">Jatuh tempo</dt>
-              <dd className="col-span-2 text-gray-900">
-                {formatDate(dueDatePreview)}{' '}
-                <Badge className="border-blue-200 bg-blue-100 text-blue-800">7 hari</Badge>
-              </dd>
-            </dl>
+                onPick={(id) => {
+                  setValue('userId', id, { shouldValidate: true });
+                  setNotice(null);
+                }}
+              />
+            )}
+            {errors.userId && (
+              <p className="mt-1 text-xs text-red-600">{errors.userId.message}</p>
+            )}
           </div>
-        )}
 
-        <div className="flex gap-2">
-          <Button
-            disabled={!canSubmit}
-            onClick={() => {
-              setNotice(null);
-              mutation.mutate();
-            }}
-          >
-            {mutation.isPending ? 'Menyimpan...' : 'Simpan Peminjaman'}
-          </Button>
-          {(userId || bookId) && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setUserId('');
-                setBookId('');
-                setNotice(null);
-              }}
-            >
-              Reset
-            </Button>
+          {/* Langkah 2: buku */}
+          <div>
+            <p className="mb-2 text-sm font-semibold text-gray-700">2. Buku (stok tersedia)</p>
+            {selectedBook ? (
+              <SelectedRow
+                subtitle={`${selectedBook.author} · stok ${selectedBook.stock}`}
+                title={selectedBook.title}
+                onClear={() => setValue('bookId', '', { shouldValidate: true })}
+              />
+            ) : (
+              <Picker
+                emptyText="Tidak ada buku tersedia"
+                loading={books.isLoading}
+                placeholder="Cari judul / pengarang / ISBN"
+                options={(books.data?.data ?? [])
+                  .filter((b) => b.stock > 0)
+                  .map((b) => ({
+                    id: b.id,
+                    title: b.title,
+                    subtitle: `${b.author} · stok ${b.stock}`,
+                    keywords: `${b.title} ${b.author} ${b.isbn}`,
+                  }))}
+                onPick={(id) => setValue('bookId', id, { shouldValidate: true })}
+              />
+            )}
+            {errors.bookId && (
+              <p className="mt-1 text-xs text-red-600">{errors.bookId.message}</p>
+            )}
+          </div>
+
+          {/* Ringkasan */}
+          {selectedMember && selectedBook && (
+            <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm">
+              <p className="mb-2 font-semibold text-gray-700">Ringkasan</p>
+              <dl className="grid grid-cols-3 gap-y-1">
+                <dt className="text-gray-500">Anggota</dt>
+                <dd className="col-span-2 text-gray-900">{selectedMember.name}</dd>
+                <dt className="text-gray-500">Buku</dt>
+                <dd className="col-span-2 text-gray-900">{selectedBook.title}</dd>
+                <dt className="text-gray-500">Tanggal pinjam</dt>
+                <dd className="col-span-2 text-gray-900">{formatDate(new Date().toISOString())}</dd>
+                <dt className="text-gray-500">Jatuh tempo</dt>
+                <dd className="col-span-2 text-gray-900">
+                  {formatDate(dueDatePreview)}{' '}
+                  <Badge className="border-blue-200 bg-blue-100 text-blue-800">7 hari</Badge>
+                </dd>
+              </dl>
+            </div>
           )}
-        </div>
+
+          <div className="flex gap-2">
+            <Button disabled={mutation.isPending} type="submit">
+              {mutation.isPending ? 'Menyimpan...' : 'Simpan Peminjaman'}
+            </Button>
+            {(userId || bookId) && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  reset({ userId: '', bookId: '' });
+                  setNotice(null);
+                }}
+              >
+                Reset
+              </Button>
+            )}
+          </div>
+        </form>
       </Card>
     </div>
   );
@@ -205,12 +222,12 @@ function Picker({
         className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder={placeholder}
         value={query}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
       />
       {open && (
         <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">

@@ -1,13 +1,22 @@
 'use client';
 // Penjelasan:
 // Kelola Buku (Admin): tabel + tambah/ubah/hapus buku + kelola kategori.
+// Form buku & kategori pakai react-hook-form + Zod (validasi per-field).
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { api } from '~/lib/axios';
 import { ApiError } from '~/lib/errors/api-error';
 import { getErrorMessage } from '~/lib/errors/utils';
+import {
+  bookSchema,
+  categorySchema,
+  type BookInput,
+  type CategoryInput,
+} from '~/schemas/library';
 import type { Book, Category, PaginatedResponse } from '~/types/library';
 
 import {
@@ -22,28 +31,18 @@ import {
   TableShell,
 } from '../-components/ui';
 
-type BookForm = {
-  id?: string;
-  isbn: string;
-  title: string;
-  author: string;
-  stock: string;
-  categoryId: string;
-};
-
-const emptyForm: BookForm = {
+const emptyBook: BookInput = {
   isbn: '',
   title: '',
   author: '',
-  stock: '1',
+  stock: 0,
   categoryId: '',
 };
 
 export default function Page() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<BookForm>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: 'error' | 'success'; msg: string } | null>(null);
-  const [newCategory, setNewCategory] = useState('');
 
   const booksKey = [['api', 'books', { limit: 100 }]];
   const categoriesKey = [['api', 'categories', { limit: 100 }]];
@@ -55,21 +54,26 @@ export default function Page() {
   const invalidateCategories = () =>
     queryClient.invalidateQueries({ queryKey: categoriesKey });
 
-  const saveBook = useMutation<unknown, ApiError>({
-    mutationFn: async () => {
-      const payload = {
-        isbn: form.isbn,
-        title: form.title,
-        author: form.author,
-        stock: Number(form.stock),
-        categoryId: form.categoryId,
-      };
-      if (form.id) return (await api.put(`/books/${form.id}`, payload)).data;
-      return (await api.post('/books', payload)).data;
+  // ---- Form buku ----
+  const bookForm = useForm<BookInput>({
+    resolver: zodResolver(bookSchema),
+    defaultValues: emptyBook,
+  });
+  const isEdit = editingId !== null;
+
+  const startCreateBook = () => {
+    setEditingId(null);
+    bookForm.reset(emptyBook);
+  };
+
+  const saveBook = useMutation<unknown, ApiError, BookInput>({
+    mutationFn: async (values) => {
+      if (editingId) return (await api.put(`/books/${editingId}`, values)).data;
+      return (await api.post('/books', values)).data;
     },
     onSuccess: () => {
-      setNotice({ type: 'success', msg: form.id ? 'Buku diperbarui.' : 'Buku ditambahkan.' });
-      setForm(emptyForm);
+      setNotice({ type: 'success', msg: editingId ? 'Buku diperbarui.' : 'Buku ditambahkan.' });
+      startCreateBook();
       invalidateBooks();
     },
     onError: (err) => setNotice({ type: 'error', msg: getErrorMessage(err) }),
@@ -84,10 +88,16 @@ export default function Page() {
     onError: (err) => setNotice({ type: 'error', msg: getErrorMessage(err) }),
   });
 
-  const addCategory = useMutation<unknown, ApiError>({
-    mutationFn: async () => (await api.post('/categories', { name: newCategory })).data,
+  // ---- Form kategori ----
+  const catForm = useForm<CategoryInput>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: { name: '' },
+  });
+
+  const addCategory = useMutation<unknown, ApiError, CategoryInput>({
+    mutationFn: async (values) => (await api.post('/categories', values)).data,
     onSuccess: () => {
-      setNewCategory('');
+      catForm.reset({ name: '' });
       invalidateCategories();
     },
     onError: (err) => setNotice({ type: 'error', msg: getErrorMessage(err) }),
@@ -98,12 +108,6 @@ export default function Page() {
     onSuccess: invalidateCategories,
     onError: (err) => setNotice({ type: 'error', msg: getErrorMessage(err) }),
   });
-
-  const set = (key: keyof BookForm) => (value: string) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
-
-  const canSave =
-    form.isbn && form.title && form.author && form.categoryId && !saveBook.isPending;
 
   return (
     <div>
@@ -153,16 +157,16 @@ export default function Page() {
                       <Button
                         className="px-3 py-1.5"
                         variant="secondary"
-                        onClick={() =>
-                          setForm({
-                            id: b.id,
+                        onClick={() => {
+                          setEditingId(b.id);
+                          bookForm.reset({
                             isbn: b.isbn,
                             title: b.title,
                             author: b.author,
-                            stock: String(b.stock),
+                            stock: b.stock,
                             categoryId: b.categoryId,
-                          })
-                        }
+                          });
+                        }}
                       >
                         Ubah
                       </Button>
@@ -188,40 +192,60 @@ export default function Page() {
         <div className="space-y-6">
           <Card className="space-y-3 p-5">
             <h2 className="font-semibold text-gray-900">
-              {form.id ? 'Ubah Buku' : 'Tambah Buku'}
+              {isEdit ? 'Ubah Buku' : 'Tambah Buku'}
             </h2>
-            <Field label="ISBN" value={form.isbn} onChange={(e) => set('isbn')(e.target.value)} />
-            <Field label="Judul" value={form.title} onChange={(e) => set('title')(e.target.value)} />
-            <Field label="Pengarang" value={form.author} onChange={(e) => set('author')(e.target.value)} />
-            <SelectField
-              label="Kategori"
-              value={form.categoryId}
-              onChange={(e) => set('categoryId')(e.target.value)}
+            <form
+              className="space-y-3"
+              onSubmit={bookForm.handleSubmit((values) => {
+                setNotice(null);
+                saveBook.mutate(values);
+              })}
             >
-              <option value="">— pilih kategori —</option>
-              {categories.data?.data.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </SelectField>
-            <Field
-              label="Stok"
-              min={0}
-              type="number"
-              value={form.stock}
-              onChange={(e) => set('stock')(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button disabled={!canSave} onClick={() => { setNotice(null); saveBook.mutate(); }}>
-                {saveBook.isPending ? 'Menyimpan...' : 'Simpan'}
-              </Button>
-              {form.id && (
-                <Button variant="secondary" onClick={() => setForm(emptyForm)}>
-                  Batal
+              <Field
+                error={bookForm.formState.errors.isbn?.message}
+                label="ISBN"
+                {...bookForm.register('isbn')}
+              />
+              <Field
+                error={bookForm.formState.errors.title?.message}
+                label="Judul"
+                {...bookForm.register('title')}
+              />
+              <Field
+                error={bookForm.formState.errors.author?.message}
+                label="Pengarang"
+                {...bookForm.register('author')}
+              />
+              <SelectField
+                error={bookForm.formState.errors.categoryId?.message}
+                label="Kategori"
+                {...bookForm.register('categoryId')}
+              >
+                <option value="">— pilih kategori —</option>
+                {categories.data?.data.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </SelectField>
+              <Field
+                error={bookForm.formState.errors.stock?.message}
+                label="Stok"
+                min={0}
+                type="number"
+                {...bookForm.register('stock', { valueAsNumber: true })}
+              />
+              <div className="flex gap-2">
+                <Button disabled={saveBook.isPending} type="submit">
+                  {saveBook.isPending ? 'Menyimpan...' : 'Simpan'}
                 </Button>
-              )}
-            </div>
+                {isEdit && (
+                  <Button type="button" variant="secondary" onClick={startCreateBook}>
+                    Batal
+                  </Button>
+                )}
+              </div>
+            </form>
           </Card>
 
           <Card className="space-y-3 p-5">
@@ -236,6 +260,7 @@ export default function Page() {
                   <button
                     className="text-gray-400 hover:text-red-600"
                     title="Hapus kategori"
+                    type="button"
                     onClick={() => {
                       if (confirm(`Hapus kategori "${c.name}"?`)) deleteCategory.mutate(c.id);
                     }}
@@ -245,20 +270,23 @@ export default function Page() {
                 </span>
               ))}
             </div>
-            <div className="flex gap-2">
+            <form
+              className="flex items-start gap-2"
+              onSubmit={catForm.handleSubmit((values) => {
+                setNotice(null);
+                addCategory.mutate(values);
+              })}
+            >
               <Field
                 className="flex-1"
+                error={catForm.formState.errors.name?.message}
                 placeholder="Kategori baru"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
+                {...catForm.register('name')}
               />
-              <Button
-                disabled={!newCategory || addCategory.isPending}
-                onClick={() => { setNotice(null); addCategory.mutate(); }}
-              >
+              <Button className="h-10" disabled={addCategory.isPending} type="submit">
                 Tambah
               </Button>
-            </div>
+            </form>
           </Card>
         </div>
       </div>

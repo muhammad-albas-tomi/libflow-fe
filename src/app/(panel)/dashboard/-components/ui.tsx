@@ -1,5 +1,6 @@
 // Penjelasan:
 // Kumpulan komponen UI dipakai ulang: Card, Button, Field, Badge, Tabel, Alert, dll.
+import { forwardRef } from 'react';
 import type { InputHTMLAttributes, SelectHTMLAttributes } from 'react';
 
 export function PageHeader({
@@ -82,18 +83,18 @@ export function Button({
   );
 }
 
-export function Field({
-  label,
-  error,
-  className = '',
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }) {
+// forwardRef supaya bisa dipakai dengan react-hook-form: <Field {...register('x')} />
+export const Field = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }
+>(function Field({ label, error, className = '', ...props }, ref) {
   return (
     <label className="block">
       {label && (
         <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
       )}
       <input
+        ref={ref}
         className={`h-10 w-full rounded-md border ${
           error ? 'border-red-400' : 'border-gray-300'
         } px-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
@@ -102,24 +103,19 @@ export function Field({
       {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
     </label>
   );
-}
+});
 
-export function SelectField({
-  label,
-  error,
-  children,
-  className = '',
-  ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & {
-  label?: string;
-  error?: string;
-}) {
+export const SelectField = forwardRef<
+  HTMLSelectElement,
+  SelectHTMLAttributes<HTMLSelectElement> & { label?: string; error?: string }
+>(function SelectField({ label, error, children, className = '', ...props }, ref) {
   return (
     <label className="block">
       {label && (
         <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
       )}
       <select
+        ref={ref}
         className={`h-10 w-full rounded-md border ${
           error ? 'border-red-400' : 'border-gray-300'
         } bg-white px-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
@@ -129,7 +125,7 @@ export function SelectField({
       </select>
     </label>
   );
-}
+});
 
 export function Alert({
   variant = 'error',
